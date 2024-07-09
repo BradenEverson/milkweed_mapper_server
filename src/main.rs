@@ -1,6 +1,6 @@
-use std::{error::Error, fs, io::{BufRead, BufReader, Write}, net::{TcpListener, TcpStream}};
+use std::{error::Error, fs, io::{BufRead, BufReader, Read, Write}, net::{TcpListener, TcpStream}};
 
-use milkweed_mapper_server::tcp::request::{Method, RequestObject};
+use milkweed_mapper_server::{loc::circle::Circle, tcp::request::{Method, RequestObject}};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let listener = TcpListener::bind("0.0.0.0:7878")?;
@@ -14,8 +14,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn handle_stream(mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
-    let buf_reader = BufReader::new(&mut stream);
+    let mut buf_reader = BufReader::new(&mut stream);
     let request: Vec<_> = buf_reader
+        .by_ref()
         .lines()
         .map(|result| result.unwrap())
         .take_while(|line| !line.is_empty())
@@ -32,7 +33,15 @@ fn handle_stream(mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
             stream.write_all(&res.to_bytes())?;
         },
         Method::POST => {
-            println!("{:?}", &req_obj.headers);
+            if let Some(content_length) = req_obj.headers.get("Content-Length") {
+                let content_length: usize = content_length.parse()?;
+                let mut body = vec![0; content_length];
+                buf_reader.read_exact(&mut body)?;
+
+                let circles: Vec<Circle> = serde_json::from_slice(&body)?;
+
+                println!("{:?}", circles);
+            }
         }
     }
 
