@@ -33,23 +33,31 @@ fn handle_stream(mut stream: TcpStream) -> Result<()> {
             stream.write_all(&res.to_bytes())?;
         },
         Method::POST => {
-            if let Some(content_length) = req_obj.headers.get("Content-Length") {
-                let content_length: usize = content_length.parse()?;
-                let mut body = vec![0; content_length];
-                buf_reader.read_exact(&mut body)?;
+            match req_obj.path.as_str() {
+                "/collect-locs" => {
+                    if let Some(content_length) = req_obj.headers.get("Content-Length") {
+                        let content_length: usize = content_length.parse()?;
+                        let mut body = vec![0; content_length];
+                        buf_reader.read_exact(&mut body)?;
 
-                let circles: std::result::Result<Vec<Circle>, serde_json::Error> = serde_json::from_slice(&body);
+                        let circles: std::result::Result<Vec<Circle>, serde_json::Error> = serde_json::from_slice(&body);
 
-                if let Ok(circ) = circles {
-                    let file = OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .truncate(true)
-                        .open("check_locations.json")?;
-                    
-                    let mut writer = BufWriter::new(file);
+                        if let Ok(circ) = circles {
+                            let file = OpenOptions::new()
+                                .create(true)
+                                .write(true)
+                                .truncate(true)
+                                .open("check_locations.json")?;
 
-                    serde_json::to_writer(&mut writer, &circ)?;
+                            let mut writer = BufWriter::new(file);
+
+                            serde_json::to_writer(&mut writer, &circ)?;
+                        }
+                    }
+                },
+                _ => {
+                    let res = HttpResponse::new("HTTP/1.1 404 NOT FOUND", fs::read_to_string("html/404.html")?);
+                    stream.write_all(&res.to_bytes())?;
                 }
             }
         }
