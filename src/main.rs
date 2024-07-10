@@ -1,8 +1,8 @@
-use std::{error::Error, fs::{self, File, OpenOptions}, io::{BufRead, BufReader, BufWriter, Read, Write}, net::{TcpListener, TcpStream}};
+use std::{fs::{self, OpenOptions}, io::{BufRead, BufReader, BufWriter, Read, Write}, net::{TcpListener, TcpStream}};
 
-use milkweed_mapper_server::{loc::circle::Circle, tcp::request::{Method, RequestObject}};
+use milkweed_mapper_server::{result::Result, loc::circle::Circle, tcp::request::{Method, RequestObject}};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let listener = TcpListener::bind("0.0.0.0:7878")?;
 
     for stream in listener.incoming() {
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn handle_stream(mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
+fn handle_stream(mut stream: TcpStream) -> Result<()> {
     let mut buf_reader = BufReader::new(&mut stream);
     let request: Vec<_> = buf_reader
         .by_ref()
@@ -38,7 +38,7 @@ fn handle_stream(mut stream: TcpStream) -> Result<(), Box<dyn Error>> {
                 let mut body = vec![0; content_length];
                 buf_reader.read_exact(&mut body)?;
 
-                let circles: Result<Vec<Circle>, serde_json::Error> = serde_json::from_slice(&body);
+                let circles: std::result::Result<Vec<Circle>, serde_json::Error> = serde_json::from_slice(&body);
 
                 if let Ok(circ) = circles {
                     let file = OpenOptions::new()
