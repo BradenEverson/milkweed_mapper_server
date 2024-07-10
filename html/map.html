@@ -22,8 +22,8 @@
 <body>
     <div id="map"></div>
     <div class="controls">
+        <button id="addCircleButton">Add Circle</button>
         <button id="exportButton">Export</button>
-        <button id="toggleDeleteButton">Toggle Delete Mode</button>
     </div>
 
     <script>
@@ -38,21 +38,19 @@
         map.locate({ setView: true, maxZoom: 16 });
 
         var circles = [];
-        var deleteMode = false;
-
-        map.on('locationfound', function (e) {
-            map.setView(e.latlng, 16);
-        });
-
-        map.on('locationerror', function (e) {
-            alert(e.message);
-        });
+        var addCircleMode = false;
 
         map.on('click', function (e) {
-            if (!deleteMode) {
+            if (addCircleMode) {
                 var circle = map.editTools.startCircle(e.latlng, { radius: 500, color: 'red', fillColor: '#f03', fillOpacity: 0.5 });
+                circle.on('editable:dragend', function () {
+                    circle.isEditing = false;
+                });
+                circle.on('editable:dragstart', function () {
+                    circle.isEditing = true;
+                });
                 circle.on('click', function (event) {
-                    if (deleteMode) {
+                    if (!circle.isEditing) {
                         map.removeLayer(circle);
                         circles = circles.filter(c => c !== circle);
                         event.preventDefault();
@@ -60,7 +58,14 @@
                     }
                 });
                 circles.push(circle);
+                addCircleMode = false;
+                document.getElementById('addCircleButton').textContent = 'Add Circle';
             }
+        });
+
+        document.getElementById('addCircleButton').addEventListener('click', function () {
+            addCircleMode = !addCircleMode;
+            this.textContent = addCircleMode ? 'Click on map to add a circle' : 'Add Circle';
         });
 
         document.getElementById('exportButton').addEventListener('click', function () {
@@ -83,11 +88,6 @@
                 .then(response => response.json())
                 .then(data => console.log('Success:', data))
                 .catch(error => console.error('Error:', error));
-        });
-
-        document.getElementById('toggleDeleteButton').addEventListener('click', function () {
-            deleteMode = !deleteMode;
-            this.textContent = deleteMode ? 'Delete Mode: ON' : 'Delete Mode: OFF';
         });
     </script>
 </body>
